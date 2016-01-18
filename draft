@@ -1,0 +1,1 @@
+url: 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=pt-BR&hl=en&dt=t&dt=bd&dj=1&source=input&tk=402644.402644&q='+text+'', // any JSON endpoint

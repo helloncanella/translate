@@ -1,0 +1,194 @@
+<html>
+
+<head>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css">
+
+  <style type="text/css">
+    #Balloon {
+      display: flex;
+    }
+    
+    #Balloon > * {
+      margin-right: 100px;
+    }
+    
+    .sound {
+      background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAQAAABKfvVzAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAAmJLR0QA/4ePzL8AAACjSURBVDjLY2AYYmA1QwADI3FKy8HkfyA8zqBOjPL/YLqO4SWQ9YXBmbDy/1C2EMMGsBZNQsr/w/lMDCuAvKOElP+HeloQSPIxPAPynVAV/seAENHtYLoKyJpDnIb/DOZA2gBI3yRWQx6Q5gZ7nFYaQE4yJN5JW8B0PaanYaADRcMaBh5wsD7HDFZMLURGHEIL0UkDpoWExAfRQlLyJiMDDSAAALgghxq3YsGLAAAAAElFTkSuQmCC);
+      display: flex;
+      width: 24px;
+      height: 24px;
+      margin-left: 5px;
+    }
+    
+    .expression {
+      display: flex;
+      align-items: center;
+    }
+    
+    .expression p {
+      margin: 0;
+    }
+  </style>
+
+</head>
+
+<body>
+
+  
+
+  <p id='text'>The announcement, which was prepared several weeks ago but delayed by the Treasury Department, was made shortly after a Swiss plane carrying Americans freed by the Iranian authorities departed Tehran. The release of the Americans came a day after Iran
+    and the United States concluded delicate negotiations on a prisoner exchange tied indirectly to the completion of a nuclear agreement.</p>
+
+  <div id="Balloon">
+
+
+    <div id="Word">
+      <h1>Word</h1>
+      <div class="content"></div>
+    </div>
+
+    <div id="Translation">
+      <h1>Translation</h1>
+      <div class="content"></div>
+    </div>
+
+    <div id="Image">
+      <h1>Images</h1>
+      <div class="content">
+        <iframe width='350' height='350' src="" frameborder="0"></iframe>
+      </div>
+    </div>
+  </div>
+
+
+
+  <script src="jquery.js"></script>
+  <script src="URI.js"></script>
+  <script src="jsonp.js"></script>
+  <script>
+    /*global speechSynthesis, SpeechSynthesisUtterance*/
+    var from = 'en';
+    var to = 'pt-BR';
+    var soundIcon = "<div class='sound'></div>";
+
+    $(document).on('click', '.sound', function(e) {
+      var language = $(this).data('language');
+      var expression = $(this).data('expression');
+      voice(language, expression);
+    })
+
+    $('p#text').mouseup(function(e) {
+      var selection = window.getSelection().toString();
+
+      if (selection) {
+        printWord(selection)
+        printTranslation(selection);
+        searchImage(selection);
+      }
+    });
+
+    function printWord(selection) {
+      var language = from;
+
+      $('#Word .content').html('').append("<div class='expression'>" + "<p>" + selection + "</p>" + soundIcon + '</p>' + "</div>");
+
+      $('#Word .content .sound').attr({
+        'data-language': language,
+        'data-expression': selection
+      });
+
+    }
+
+    function printTranslation(selection) {
+      var url = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&hl=' + from + '&tl=' + to + '&dt=t&dt=bd&dj=1&source=input&tk=402644.402644&q=' + selection + '';
+      var language = to;
+
+      getJSON(url)
+        .then(
+          function(data) {
+            var terms;
+            var translation = data.sentences[0].trans;
+
+            $('#Translation .content').html('');
+
+            if (data.dict) {
+              terms = data.dict[0].terms;
+              $('#Translation .content').append('<ol></ol>');
+            }
+
+            if (terms && terms.length > 0) {
+              terms.forEach(function(term,i) {
+                $('#Translation .content ol').append("<li class='item-"+i+" expression'>" + "<p>" + (i+1) + '. '+ term + "</p>" + soundIcon + "</li>");
+                
+                $('#Translation .content ol .item-'+i+' .sound').attr({
+                  'data-language': language,
+                  'data-expression': term
+                });
+              });
+            }
+            else if (translation) {
+              $('#Translation .content').append("<div class='expression'>" + "<p>" + translation + "</p>" + soundIcon + "</div>");
+              
+              $('#Translation .content .sound').attr({
+                  'data-language': language,
+                  'data-expression': translation
+              });           
+            }
+            else {
+              $('#Translation .content').append(selection);
+            }
+
+          }
+        )
+    }
+
+    function searchImage(selection) {
+      var url = 'https://duckduckgo.com/?q=' + selection + '&iax=1&ia=images';
+      $('.content iframe').attr('src', url);
+    }
+
+    function getJSON(url) {
+
+      return new Promise(function(resolve, reject) {
+        $.jsonp({
+          url: url,
+          corsSupport: true, // if URL above supports CORS (optional)
+          jsonpSupport: true, // if URL above supports JSONP (optional)
+
+          success: function(data) {
+            resolve(data);
+          },
+          error: function(error) {
+              reject(error);
+            }
+            // error, etc.
+        });
+      })
+
+    }
+
+    function voice(language, text) {
+      speechSynthesis.cancel(); // destroying past queue
+      var voices = window.speechSynthesis.getVoices();
+      var msg = new SpeechSynthesisUtterance();
+
+      msg.voiceURI = 'native';
+      msg.volume = 1; // 0 to 1
+      msg.rate = 1; // 0.1 to 10
+      msg.pitch = 1; //0 to 2
+
+      for (var i = 0; i < voices.length; i++) {
+        if (language == voices[i].lang) {
+          msg.voice = voices[i];
+        }
+      }
+
+      msg.text = String(text);
+      msg.lang = String(language);
+      speechSynthesis.speak(msg);
+
+    }
+  </script>
+</body>
+
+</html>
